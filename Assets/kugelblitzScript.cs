@@ -12,7 +12,9 @@ public class kugelblitzScript : MonoBehaviour {
 	public AudioClip[] sounds;
 	public KMBombInfo BombInfo;
 	public GameObject[] Orbs;
+	public List<MeshRenderer> OrbsMeshRenderer;
 	public GameObject[] Glow;
+	public List<Light> GlowLight;
 	public KMSelectable Sphere;
 	public GameObject Shiny;
 	public KMBombModule Module;
@@ -87,11 +89,27 @@ public class kugelblitzScript : MonoBehaviour {
 	public static int modID = 1;
 	public int currentModID;
 
+	private MeshRenderer sphereMeshRenderer;
+	private TextMesh sphereTextMesh;
+	private Light shinyMeshRenderer;
+
 	//⊢∸−⊣∙⟛⫣⊩‖|
 
 	// Use this for initialization
 	void Awake () {
+		sphereMeshRenderer = Sphere.GetComponent<MeshRenderer>();
+		sphereTextMesh = Sphere.GetComponentInChildren<TextMesh>();
+		shinyMeshRenderer = Shiny.GetComponent<Light>();
+		foreach (GameObject orb in Orbs)
+		{
+			OrbsMeshRenderer.Add(orb.GetComponent<MeshRenderer>());
+		}
 
+		foreach (GameObject light in Glow)
+		{
+			GlowLight.Add(light.GetComponent<Light>());
+		}
+		
 		currentModID = modID++;
 		colorblind = CBM.ColorblindModeActive;
 
@@ -121,7 +139,7 @@ public class kugelblitzScript : MonoBehaviour {
 		{
 			if (solved != Display.Length)
 			{
-				Module.HandleStrike(); Sphere.GetComponent<MeshRenderer>().material.color = new Color(0.5f, 0f, 0f); basecol = new float[] { 0.5f, 0f, 0f }; hold = false;
+				Module.HandleStrike(); sphereMeshRenderer.material.color = new Color(0.5f, 0f, 0f); basecol = new float[] { 0.5f, 0f, 0f }; hold = false;
 			}
 			else
 			{
@@ -129,27 +147,27 @@ public class kugelblitzScript : MonoBehaviour {
 				{
 					if (!cruel)
 					{
-						Sphere.GetComponent<MeshRenderer>().material.color = new Color(1f, 1f, 1f);
-						Shiny.GetComponent<Light>().color = new Color(1f, 1f, 1f, 0.5f);
+						sphereMeshRenderer.material.color = new Color(1f, 1f, 1f);
+						shinyMeshRenderer.color = new Color(1f, 1f, 1f, 0.5f);
 						basecol = new float[] { 1f, 1f, 1f };
 					}
 					else if (!secseq) {
-						Sphere.GetComponent<MeshRenderer>().material.color = new Color(1f, 0.5f, 0f);
-						Shiny.GetComponent<Light>().color = new Color(1f, 0.5f, 0f, 0.5f);
+						sphereMeshRenderer.material.color = new Color(1f, 0.5f, 0f);
+						shinyMeshRenderer.color = new Color(1f, 0.5f, 0f, 0.5f);
 						basecol = new float[] { 1f, 0.5f, 0f };
 					}
 					else
 					{
 						if (!holdA)
 						{
-							Sphere.GetComponent<MeshRenderer>().material.color = new Color(0f, 0.5f, 1f);
-							Shiny.GetComponent<Light>().color = new Color(0f, 0.5f, 1f, 0.5f);
+							sphereMeshRenderer.material.color = new Color(0f, 0.5f, 1f);
+							shinyMeshRenderer.color = new Color(0f, 0.5f, 1f, 0.5f);
 							basecol = new float[] { 0f, 0.5f, 1f };
 						}
 						else
 						{
-							Sphere.GetComponent<MeshRenderer>().material.color = new Color(0.5f, 0.5f, 0.5f);
-							Shiny.GetComponent<Light>().color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+							sphereMeshRenderer.material.color = new Color(0.5f, 0.5f, 0.5f);
+							shinyMeshRenderer.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
 							basecol = new float[] { 0.5f, 0.5f, 0.5f };
 						}
 					}
@@ -181,8 +199,8 @@ public class kugelblitzScript : MonoBehaviour {
 				}
 				if (holdA)
 				{
-					/*Sphere.GetComponent<MeshRenderer>().material.color = new Color(1f, 0.5f, 0f);
-					Shiny.GetComponent<Light>().color = new Color(1f, 0.5f, 0f, 0.5f);
+					/*sphereMeshRenderer.material.color = new Color(1f, 0.5f, 0f);
+					shinyMeshRenderer.color = new Color(1f, 0.5f, 0f, 0.5f);
 					basecol = new float[] { 1f, 0.5f, 0f };*/
 				}
 			}
@@ -200,7 +218,7 @@ public class kugelblitzScript : MonoBehaviour {
 			Orbs[i].transform.localPosition = new Vector3(x[i], y[i], z[i]);
 			vmod[i] = 0.0000125f / Mathf.Pow(r[i], 2f);
 		}
-		Sphere.GetComponentInChildren<TextMesh>().text = "";
+		sphereTextMesh.text = "";
 	}
 
 	private void Start()
@@ -529,7 +547,7 @@ public class kugelblitzScript : MonoBehaviour {
 							{
 								if (!cruel || secseq)
 								{
-									Sphere.GetComponent<MeshRenderer>().material.color = new Color(0.5f, 0f, 0f);
+									sphereMeshRenderer.material.color = new Color(0.5f, 0f, 0f);
 									basecol = new float[] { 0.5f, 0f, 0f };
 									if (!cruel)
 									{
@@ -608,14 +626,14 @@ public class kugelblitzScript : MonoBehaviour {
 								userSequence += '(';
 								if (hold)
 								{
-									Sphere.GetComponent<MeshRenderer>().material.color = new Color(0.5f, 0.5f, 0.5f);
-									Shiny.GetComponent<Light>().color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+									sphereMeshRenderer.material.color = new Color(0.5f, 0.5f, 0.5f);
+									shinyMeshRenderer.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
 									basecol = new float[] { 0.5f, 0.5f, 0.5f };
 								}
 								else
 								{
-									Sphere.GetComponent<MeshRenderer>().material.color = new Color(1f, 0.5f, 0f);
-									Shiny.GetComponent<Light>().color = new Color(1f, 0.5f, 0f, 0.5f);
+									sphereMeshRenderer.material.color = new Color(1f, 0.5f, 0f);
+									shinyMeshRenderer.color = new Color(1f, 0.5f, 0f, 0.5f);
 									basecol = new float[] { 1f, 0.5f, 0f };
 								}
 							}
@@ -624,8 +642,8 @@ public class kugelblitzScript : MonoBehaviour {
 								userSequence += ')';
 								/*if (hold)
 								{
-									Sphere.GetComponent<MeshRenderer>().material.color = new Color(0f, 0.5f, 1f);
-									Shiny.GetComponent<Light>().color = new Color(0f, 0.5f, 1f, 0.5f);
+									sphereMeshRenderer.material.color = new Color(0f, 0.5f, 1f);
+									shinyMeshRenderer.color = new Color(0f, 0.5f, 1f, 0.5f);
 									basecol = new float[] { 0f, 0.5f, 1f };
 								}*/
 							}
@@ -665,8 +683,8 @@ public class kugelblitzScript : MonoBehaviour {
 							basecol[0] = (0.875f + basecol[0] * 63f) / 64f; basecol[1] = (0.9375f + basecol[1] * 63f) / 64f; basecol[2] = (1f + basecol[2] * 63f) / 64f;
 						}
 					}
-					Sphere.GetComponent<MeshRenderer>().material.color = new Color(basecol[0], basecol[1], basecol[2]);
-					Shiny.GetComponent<Light>().color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
+					sphereMeshRenderer.material.color = new Color(basecol[0], basecol[1], basecol[2]);
+					shinyMeshRenderer.color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
 				}
 				else if (secseq)
 				{
@@ -680,8 +698,8 @@ public class kugelblitzScript : MonoBehaviour {
 						{
 							basecol[0] = (0f + basecol[0] * 63f) / 64f; basecol[1] = (0.5f + basecol[1] * 63f) / 64f; basecol[2] = (1f + basecol[2] * 63f) / 64f;
 						}
-						Sphere.GetComponent<MeshRenderer>().material.color = new Color(basecol[0], basecol[1], basecol[2]);
-						Shiny.GetComponent<Light>().color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
+						sphereMeshRenderer.material.color = new Color(basecol[0], basecol[1], basecol[2]);
+						shinyMeshRenderer.color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
 					}
 				}
 				solved = BombInfo.GetSolvedModuleNames().Where(a => !ignoredModules.Contains(a)).Count();
@@ -709,7 +727,7 @@ public class kugelblitzScript : MonoBehaviour {
 						nb[i] = (cb[6 - i] / 2f + ((Display[solved] / j) % 2) / 2f + 63f * nb[i]) / 64f;
 						if (t % 30 == 0 && i == 6 - cbcount && colorblind)
 						{
-							Sphere.GetComponentInChildren<TextMesh>().text = col[7 - i] + bri[((Display[solved] / j) % 2)].ToString();
+							sphereTextMesh.text = col[7 - i] + bri[((Display[solved] / j) % 2)].ToString();
 							cbcount++;
 						}
 					}
@@ -722,7 +740,7 @@ public class kugelblitzScript : MonoBehaviour {
 							nb[i] = (cb[6 - i] / 2f + ((targetNum / j) % 2) / 2f + 63f * nb[i]) / 64f;
 							if (t % 50 == 0 && i == 6 - cbcount && colorblind)
 							{
-								Sphere.GetComponentInChildren<TextMesh>().text = col[7 - i] + bri[((targetNum / j) % 2)].ToString();
+								sphereTextMesh.text = col[7 - i] + bri[((targetNum / j) % 2)].ToString();
 								cbcount++;
 							}
 						}
@@ -740,19 +758,19 @@ public class kugelblitzScript : MonoBehaviour {
 							}
 							if (colorblind)
 							{
-								Sphere.GetComponentInChildren<TextMesh>().text = direction.ToString() + col[direction];
+								sphereTextMesh.text = direction.ToString() + col[direction];
 							}
 						}
 					}
-					Orbs[i].GetComponent<MeshRenderer>().material.color = new Color(nr[i], ng[i], nb[i]);
-					Glow[i].GetComponent<Light>().color = new Color(nr[i], ng[i], nb[i], 0.75f);
+					OrbsMeshRenderer[i].material.color = new Color(nr[i], ng[i], nb[i]);
+					GlowLight[i].color = new Color(nr[i], ng[i], nb[i], 0.75f);
 					j = j * 2;
 					if (!colorblind)
-						Sphere.GetComponentInChildren<TextMesh>().text = "";
+						sphereTextMesh.text = "";
 					if (cruel)
-						Sphere.GetComponentInChildren<TextMesh>().color = new Color(0.03125f, 0f, 0.0625f);
+						sphereTextMesh.color = new Color(0.03125f, 0f, 0.0625f);
 					else
-						Sphere.GetComponentInChildren<TextMesh>().color = new Color(1f, 1f, 1f);
+						sphereTextMesh.color = new Color(1f, 1f, 1f);
 				}
 			}
 		}
@@ -761,7 +779,7 @@ public class kugelblitzScript : MonoBehaviour {
 
 	private IEnumerator SolvingKugel ()
 	{
-		Sphere.GetComponentInChildren<TextMesh>().text = "";
+		sphereTextMesh.text = "";
 		solve = true;
 		basecol = new float[] { 1f, 1f, 1f };
 		KMAudio.KMAudioRef noise = null;
@@ -773,9 +791,9 @@ public class kugelblitzScript : MonoBehaviour {
 				sound = null;
 				noise = Audio.PlaySoundAtTransformWithRef("Decay", Module.transform);
 			}
-			Sphere.GetComponentInChildren<TextMesh>().text = "";
-			Sphere.GetComponent<MeshRenderer>().material.color = new Color(basecol[0], basecol[1], basecol[2]);
-			Shiny.GetComponent<Light>().color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
+			sphereTextMesh.text = "";
+			sphereMeshRenderer.material.color = new Color(basecol[0], basecol[1], basecol[2]);
+			shinyMeshRenderer.color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
 			scale -= i / 5000f;
 			yield return new WaitForSeconds(0.02f);
 			basecol[0] = (statuslight[0] + basecol[0] * 31f) / 32f; basecol[1] = (statuslight[1] + basecol[1] * 31f) / 32f; basecol[2] = (statuslight[2] + basecol[2] * 31f) / 32f;
@@ -785,18 +803,18 @@ public class kugelblitzScript : MonoBehaviour {
 				Orbs[j].transform.localPosition = new Vector3(x[j], y[j], z[j]);
 			}
 			Sphere.transform.localScale = new Vector3(scale, scale, scale);
-			Shiny.GetComponent<Light>().range = scale / 2f + 0.05f;
+			shinyMeshRenderer.range = scale / 2f + 0.05f;
 		}
 		Sphere.transform.localScale = new Vector3(0.025f, 0.025f, 0.025f);
-		Shiny.GetComponent<Light>().range = 0.0375f;
+		shinyMeshRenderer.range = 0.0375f;
 		for (int j = 0; j < 7; j++)
 		{
 			Orbs[j].transform.localPosition = new Vector3(0f, 0f, 0f);
 			Orbs[j].transform.localScale = new Vector3( 0f, 0f, 0f );
-			Glow[j].GetComponent<Light>().range = 0f;
+			GlowLight[j].range = 0f;
 		}
-		Sphere.GetComponent<MeshRenderer>().material.color = new Color(statuslight[0], statuslight[1], statuslight[2]);
-		Shiny.GetComponent<Light>().color = new Color(statuslight[0], statuslight[1], statuslight[2], 0.5f);
+		sphereMeshRenderer.material.color = new Color(statuslight[0], statuslight[1], statuslight[2]);
+		shinyMeshRenderer.color = new Color(statuslight[0], statuslight[1], statuslight[2], 0.5f);
 		noise.StopSound();
 		noise = null;
 		if (cruel)
@@ -808,7 +826,8 @@ public class kugelblitzScript : MonoBehaviour {
 			{
 				basecol[0] = (1f + basecol[0] * 31f) / 32f; basecol[1] = (0.5f + basecol[1] * 31f) / 32f; basecol[2] = (0f + basecol[2] * 31f) / 32f;
 				clonecol[0] = (0f + clonecol[0] * 31f) / 32f; clonecol[1] = (0.5f + clonecol[1] * 31f) / 32f; clonecol[2] = (1f + clonecol[2] * 31f) / 32f;
-				Sphere.GetComponent<MeshRenderer>().material.color = new Color(basecol[0], basecol[1], basecol[2]);
+				sphereMeshRenderer.material.color = new Color(basecol[0], basecol[1], basecol[2]);
+				//Justified GerComponent in this case
 				clone.GetComponent<MeshRenderer>().material.color = new Color(clonecol[0], clonecol[1], clonecol[2]);
 				Sphere.GetComponentInChildren<Light>().color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
 				clone.GetComponentInChildren<Light>().color = new Color(clonecol[0], clonecol[1], clonecol[2], 0.5f);
@@ -828,18 +847,18 @@ public class kugelblitzScript : MonoBehaviour {
 		{
 			if(i == -9)
 				sound = Audio.PlaySoundAtTransformWithRef("HighPitch", Module.transform);
-			Sphere.GetComponent<MeshRenderer>().material.color = new Color(basecol[0], basecol[1], basecol[2]);
-			Shiny.GetComponent<Light>().color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
+			sphereMeshRenderer.material.color = new Color(basecol[0], basecol[1], basecol[2]);
+			shinyMeshRenderer.color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
 			scale += i / 25000f;
 			yield return new WaitForSeconds(0.02f);
 			basecol[0] = (1f + basecol[0] * 63f) / 64f; basecol[1] = (1f + basecol[1] * 63f) / 64f; basecol[2] = (1f + basecol[2] * 63f) / 64f;
 			Sphere.transform.localScale = new Vector3(scale, scale, scale);
-			Shiny.GetComponent<Light>().range = (i + 140) / 1000f;
-			Shiny.GetComponent<Light>().intensity = (i + 240) / 200f;
+			shinyMeshRenderer.range = (i + 140) / 1000f;
+			shinyMeshRenderer.intensity = (i + 240) / 200f;
 		}
 		Sphere.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
-		Shiny.GetComponent<Light>().range = 0.1f;
-		Shiny.GetComponent<Light>().intensity = 1f;
+		shinyMeshRenderer.range = 0.1f;
+		shinyMeshRenderer.intensity = 1f;
 		scale = 0.1f;
 		sound.StopSound();
 		sound = null;
