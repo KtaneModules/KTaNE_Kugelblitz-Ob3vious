@@ -20,12 +20,12 @@ MonoBehaviour:
 
 
     Note this is a boss module. Enjoy spinning around on a klein bottle and discussing
-    a 30 second sequence of holds and releases!
+    a 20+ second sequence of holds and releases!
 
     Inspired by Timwi''s Black Hole module, except this one already ate the puzzlebackground...
 
 
     enjoy suffering :)'
-  version: 1.4
+  version: 1.6
   outputFolder: build
-  previewImage: {fileID: 2800000, guid: 54169517baca4db4e9eb730d3b8b7996, type: 3}
+  previewImage: {fileID: 2800000, guid: c2d7b3955613c854f82d42175337ad6a, type: 3}

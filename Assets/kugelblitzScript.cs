@@ -49,9 +49,11 @@ public class kugelblitzScript : MonoBehaviour {
 	private float[] ng = { 1f, 1f, 1f, 1f, 1f, 1f, 1f };
 	private float[] nb = { 1f, 1f, 1f, 1f, 1f, 1f, 1f };
 	private float[] statuslight = { 0f, 1f, 0f };
+	public static int[] DisplayBase = { };
 	private int[] Display;
-	private int targetNum;
-	private int direction;
+	public static int targetNum;
+	public static int direction;
+	public static bool totalsolved;
 	private int[,] grid = {	{ 5, 1, 3, 6, 4, 0, 2},
 							{ 1, 2, 6, 4, 0, 5, 3},
 							{ 4, 0, 5, 1, 3, 2, 6},
@@ -61,7 +63,7 @@ public class kugelblitzScript : MonoBehaviour {
 							{ 2, 6, 1, 3, 5, 4, 0} };
 	private int[] pivot = { 0, 0, 0 };
 	private int[] stored = { 0, 0, 0, 0, 0, 0, 0 };
-	private int[] storedb = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	private int[] storedb = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	private int[] xtransf = { 0, 1, 1, 1, 0, -1, -1, -1 };
 	private int[] ytransf = { -1, -1, 0, 1, 1, 1, 0, -1 };
 	private int rotation = 3;
@@ -72,7 +74,8 @@ public class kugelblitzScript : MonoBehaviour {
 	private int cruelI2 = 0;
 	private int cruelPos = 0;
 	private long bigStore = 0L;
-	private string controlSequence = "";
+	public static string controlSequence = "";
+	private string binarylog = "";
 	private string cruelSequence = "[(";
 	private int t = 0;
 	private int solved = 0;
@@ -89,6 +92,9 @@ public class kugelblitzScript : MonoBehaviour {
 	public static int modID = 1;
 	public int currentModID;
 
+	public static int kugelcount;
+	public int kugelID;
+
 	private MeshRenderer sphereMeshRenderer;
 	private TextMesh sphereTextMesh;
 	private Light shinyMeshRenderer;
@@ -97,6 +103,9 @@ public class kugelblitzScript : MonoBehaviour {
 
 	// Use this for initialization
 	void Awake () {
+		kugelcount = 0;
+		totalsolved = false;
+		controlSequence = "";
 		sphereMeshRenderer = Sphere.GetComponent<MeshRenderer>();
 		sphereTextMesh = Sphere.GetComponentInChildren<TextMesh>();
 		shinyMeshRenderer = Shiny.GetComponent<Light>();
@@ -205,6 +214,14 @@ public class kugelblitzScript : MonoBehaviour {
 				}
 			}
 		};
+		BombInfo.OnBombExploded += delegate ()
+		{
+			if(sound != null)
+			{
+				sound.StopSound();
+				sound = null;
+			}
+		};
 
 		GetComponent<KMBombModule>().OnActivate += ActivateModule;
 
@@ -223,6 +240,8 @@ public class kugelblitzScript : MonoBehaviour {
 
 	private void Start()
 	{
+		kugelcount++;
+		kugelID = kugelcount;
 		StartCoroutine(StartingKugel());
 	}
 
@@ -231,28 +250,31 @@ public class kugelblitzScript : MonoBehaviour {
 		int count = BombInfo.GetSolvableModuleNames().Count(a => !ignoredModules.Contains(a)) + ADDED_STAGES;
 		string[] cardinals = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"};
 		string[] rotate = { "clockwise", "counterclockwise" };
-		Debug.LogFormat("[Kugelblitz #{0}] found {1} solvable modules.", currentModID, count);
 		if (count == 0) { Module.HandlePass(); forcedSolve = true; } //Prevent deadlock
-		else
+		else if (kugelID == 1)
 		{
-			Display = new int[count];
+			Debug.LogFormat("[Kugelblitz #{0}] Found {1} solvable modules.", currentModID, count);
+			DisplayBase = new int[kugelcount * count];
 			targetNum = Rnd.Range(0, 98);
 			int previous = 0;
-			for (int i = 0; i < count - 1; i++)
+			for (int j = 0; j < kugelcount; j++)
 			{
-				Display[i] = Rnd.Range(0, 128);
-				previous = Display[i] ^ previous;
+				for (int i = 0; (i < count - 1) || (j < kugelcount - 1 && i < count); i++)
+				{
+					DisplayBase[i + j * count] = Rnd.Range(0, 128);
+					previous = DisplayBase[j * count + i] ^ previous;
+				}
 			}
-			Display[count - 1] = targetNum ^ previous;
+			DisplayBase[kugelcount * count - 1] = targetNum ^ previous;
 			direction = Rnd.Range(0, 8);
 			pivot[0] = (targetNum / 7) % 7;
 			pivot[1] = targetNum % 7;
 			pivot[2] = direction % 8;
 			if (targetNum / 49 == 1)
 				rotation *= -1;
-			Debug.LogFormat("[Kugelblitz #{0}] Generated binary numbers are {1}. This will result in {2}.", currentModID, Display.Join(", "), targetNum);
+			Debug.LogFormat("[Kugelblitz #{0}] Generated binary numbers are {1}. This will result in {2}.", currentModID, DisplayBase.Join(", "), targetNum);
 			Debug.LogFormat("[Kugelblitz #{0}] Starting at ({1}, {2}) in direction {3}, starting with a rotational modifier of 135 degrees {4}.", currentModID, pivot[0], pivot[1], cardinals[direction], rotate[targetNum / 49]);
-			for (int i = 0; i < 13; i++)
+			for (int i = 0; i < 17; i++)
 			{
 				for (int j = 0; j <= i; j++)
 				{
@@ -277,25 +299,30 @@ public class kugelblitzScript : MonoBehaviour {
 						pivot[2] = -pivot[2];
 					}
 				}
-				storedb[i] %= 7;
-				if (i < 7)
-					stored[i] = storedb[i];
 				pivot[2] = pivot[2] + rotation;
+				storedb[i] %= 7;
 			}
-			for (int i = 0; i < 7; i++)
+			bigStore = 0;
+			for (int i = 0; i < 17 && i < 5 + kugelcount * 2; i++)
 			{
-				bigStore = bigStore * 7 + stored[i];
+				bigStore = bigStore * 7 + storedb[i];
 			}
-			Debug.LogFormat("[Kugelblitz #{0}] Calculated values are {1}.", currentModID, stored.Join(", "));
-			if (bigStore < 524288)
-				bigStore += 524288;
-			int j2 = 524288;
+			Debug.LogFormat("[Kugelblitz #{0}] Detected {1} Kugelblitz. Calculated values are {2}.", currentModID, kugelcount, storedb.Take(5 + kugelcount * 2).Join(", "));
+			long j2 = 1L;
+			for (int i = 0; i < 5 + 2 * kugelcount && i < 17; i++)
+			{
+				j2 *= 8L;
+			}
+			j2 /= 2L;
+			if (bigStore < j2)
+				bigStore += j2;
 			int k = 0;
 			bool h = false;
-			for (int i = 0; i < 20; i++)
+			for (int i = 0; i < 3 * (5 + 2 * kugelcount) && i < 51; i++)
 			{
 				if ((bigStore / j2) % 2 == 1)
 				{
+					binarylog += '1';
 					if (k >= 3)
 					{
 						k = 0;
@@ -308,9 +335,13 @@ public class kugelblitzScript : MonoBehaviour {
 					else
 					{
 						if (h)
+						{
 							controlSequence += ']';
+						}
 						else
+						{
 							controlSequence += '[';
+						}
 						h = !h;
 						if (k < 1)
 							k = 1;
@@ -320,6 +351,7 @@ public class kugelblitzScript : MonoBehaviour {
 				}
 				else
 				{
+					binarylog += '0';
 					if (k <= -2 || (k <= -1 && !h))
 					{
 						k = 0;
@@ -328,7 +360,9 @@ public class kugelblitzScript : MonoBehaviour {
 							controlSequence += ']';
 						}
 						else
+						{
 							controlSequence += '[';
+						}
 						h = !h;
 						if (k < 1)
 							k = 1;
@@ -347,7 +381,9 @@ public class kugelblitzScript : MonoBehaviour {
 				j2 /= 2;
 			}
 			if (h)
+			{
 				controlSequence += "]∙∙";
+			}
 			else
 			{
 				if (controlSequence[controlSequence.Length - 1] != '∙' || controlSequence[controlSequence.Length - 2] != '∙')
@@ -356,9 +392,10 @@ public class kugelblitzScript : MonoBehaviour {
 						controlSequence += '∙';
 				}
 			}
+			Debug.LogFormat("[Kugelblitz #{0}] The calculated binary is {1}.", currentModID, binarylog);
 			Debug.LogFormat("[Kugelblitz #{0}] The calculated sequence is {1}, which translates to {2}.", currentModID, controlSequence.Replace("]∙∙", "]").Replace("[", "i").Replace("]", "i").Replace("∙", "p"), controlSequence.Replace("]∙∙", "]").Replace("[∙∙]", "[∸−∸]").Replace("[∙", "[∸").Replace("∙]", "∸]").Replace("[][]", "‖").Replace("[][", "⊩").Replace("][]", "\u2AE3").Replace("][", "\u27DB").Replace("[]", "|").Replace("[", "⊢").Replace("]", "⊣"));
 			
-			Debug.LogFormat("[Kugelblitz #{0}] Cruel values are {1}.", currentModID, storedb.Join(", "));
+			Debug.LogFormat("[Kugelblitz #{0}] Cruel values are {1}.", currentModID, storedb.Take(13).Join(", "));
 			bigStore = 0;
 			for (int i = 0; i < 13; i++)
 			{
@@ -501,8 +538,13 @@ public class kugelblitzScript : MonoBehaviour {
 				}
 			}
 			Debug.LogFormat("[Kugelblitz #{0}] The cruel sequence is {1} or {2}.", currentModID, cruelSequence.Replace("-", "").Replace("]∙∙", "]").Replace(")∙∙", ")").Replace("(", "a").Replace(")", "a").Replace("[", "b").Replace("]", "b").Replace("∙", "p"), cruelSequence.Replace("-", "").Replace("]∙∙", "]").Replace(")∙∙", ")"));
-			ready = true;
 		}
+        else
+        {
+			Debug.LogFormat("[Kugelblitz #{0}] Logging can be found at 'Kugelblitz #{1}'.", currentModID, (currentModID - kugelID + 1));
+		}
+		Display = new int[count];
+		ready = true;
 	}
 		
 	// Update is called once per frame
@@ -514,8 +556,19 @@ public class kugelblitzScript : MonoBehaviour {
 			t %= 150;
 			if (!solve)
 			{
+				if (totalsolved)
+				{
+					statuslight = new float[] { 0.75f, 0.75f, 0.75f };
+					StartCoroutine(SolvingKugel());
+				}
 				if (t == 0)
 				{
+					if (secseq && cruel && (cruelSplit[cruelI] == cruelI2) && cruelI < cruelSplit.Length - 1)
+					{
+						cruelI2 = 0;
+						cruelI++;
+						//Debug.Log("waiting time");
+					}
 					if (ready && (solved == Display.Length))
 					{
 						for (int i = 0; i < 7; i++)
@@ -557,7 +610,7 @@ public class kugelblitzScript : MonoBehaviour {
 									}
 									else
 									{
-										if (userSequence == controlSequence)
+										if (userSequence == cruelSequence)
 										{
 											StartCoroutine(SolvingKugel());
 											goto CruelBreak;
@@ -603,7 +656,7 @@ public class kugelblitzScript : MonoBehaviour {
 							}
 						}
 					}
-					else if (userSequence.Length > 3 && hold && userSequence[userSequence.Length - 2] == '∙' && userSequence[userSequence.Length - 3] == '∙')
+					else if (userSequence.Length > 3 && hold && userSequence[userSequence.Length - 2] == '∙' && userSequence[userSequence.Length - 3] == '∙' && kugelcount == 1)
 					{
 						cruelInteract = new int[] { };
 						cruelI = 0;
@@ -650,12 +703,6 @@ public class kugelblitzScript : MonoBehaviour {
 							holdA = !holdA;
 							cruelPos++;
 							cruelI2++;
-							if (cruelSplit[cruelI] == cruelI2)
-							{
-								cruelI2 = 0;
-								cruelI++;
-								//Debug.Log("waiting time");
-							}
 						}
 						else
 						{
@@ -722,9 +769,31 @@ public class kugelblitzScript : MonoBehaviour {
 
 					if (ready && !(solved == Display.Length))
 					{
-						nr[i] = (cr[6 - i] / 2f + ((Display[solved] / j) % 2) / 2f + 63f * nr[i]) / 64f;
-						ng[i] = (cg[6 - i] / 2f + ((Display[solved] / j) % 2) / 2f + 63f * ng[i]) / 64f;
-						nb[i] = (cb[6 - i] / 2f + ((Display[solved] / j) % 2) / 2f + 63f * nb[i]) / 64f;
+						for (int k = 0; k < Display.Length; k++)
+						{
+							Display[k] = DisplayBase[k + (kugelID - 1) * Display.Length];
+						}
+						if (((Display[solved] / j) % 2 == 1))
+						{
+							nr[i] = (cr[6 - i] + 63f * nr[i]) / 64f;
+							ng[i] = (cg[6 - i] + 63f * ng[i]) / 64f;
+							nb[i] = (cb[6 - i] + 63f * nb[i]) / 64f;
+						}
+						else
+						{
+							if (solved % 2 == 1)
+							{
+								nr[i] = (63f * nr[i]) / 64f;
+								ng[i] = (63f * ng[i]) / 64f;
+								nb[i] = (63f * nb[i]) / 64f;
+							}
+							else
+							{
+								nr[i] = (1f + 63f * nr[i]) / 64f;
+								ng[i] = (1f + 63f * ng[i]) / 64f;
+								nb[i] = (1f + 63f * nb[i]) / 64f;
+							}
+						}
 						if (t % 30 == 0 && i == 6 - cbcount && colorblind)
 						{
 							sphereTextMesh.text = col[7 - i] + bri[((Display[solved] / j) % 2)].ToString();
@@ -735,9 +804,18 @@ public class kugelblitzScript : MonoBehaviour {
 					{
 						if (struck)
 						{
-							nr[i] = (cr[6 - i] / 2f + ((targetNum / j) % 2) / 2f + 63f * nr[i]) / 64f;
-							ng[i] = (cg[6 - i] / 2f + ((targetNum / j) % 2) / 2f + 63f * ng[i]) / 64f;
-							nb[i] = (cb[6 - i] / 2f + ((targetNum / j) % 2) / 2f + 63f * nb[i]) / 64f;
+							if (((targetNum / j) % 2 == 1))
+							{
+								nr[i] = (cr[6 - i] + 63f * nr[i]) / 64f;
+								ng[i] = (cg[6 - i] + 63f * ng[i]) / 64f;
+								nb[i] = (cb[6 - i] + 63f * nb[i]) / 64f;
+							}
+							else
+							{
+								nr[i] = (1f + 63f * nr[i]) / 64f;
+								ng[i] = (1f + 63f * ng[i]) / 64f;
+								nb[i] = (1f + 63f * nb[i]) / 64f;
+							}
 							if (t % 50 == 0 && i == 6 - cbcount && colorblind)
 							{
 								sphereTextMesh.text = col[7 - i] + bri[((targetNum / j) % 2)].ToString();
@@ -781,14 +859,18 @@ public class kugelblitzScript : MonoBehaviour {
 	{
 		sphereTextMesh.text = "";
 		solve = true;
+		totalsolved = true;
 		basecol = new float[] { 1f, 1f, 1f };
 		KMAudio.KMAudioRef noise = null;
 		for (int i = -10; scale >= 0.01f; i++)
 		{
 			if (i == -5)
 			{
-				sound.StopSound();
-				sound = null;
+				if (sound != null)
+				{
+					sound.StopSound();
+					sound = null;
+				}
 				noise = Audio.PlaySoundAtTransformWithRef("Decay", Module.transform);
 			}
 			sphereTextMesh.text = "";
@@ -827,7 +909,7 @@ public class kugelblitzScript : MonoBehaviour {
 				basecol[0] = (1f + basecol[0] * 31f) / 32f; basecol[1] = (0.5f + basecol[1] * 31f) / 32f; basecol[2] = (0f + basecol[2] * 31f) / 32f;
 				clonecol[0] = (0f + clonecol[0] * 31f) / 32f; clonecol[1] = (0.5f + clonecol[1] * 31f) / 32f; clonecol[2] = (1f + clonecol[2] * 31f) / 32f;
 				sphereMeshRenderer.material.color = new Color(basecol[0], basecol[1], basecol[2]);
-				//Justified GerComponent in this case
+				//Justified GetComponent in this case
 				clone.GetComponent<MeshRenderer>().material.color = new Color(clonecol[0], clonecol[1], clonecol[2]);
 				Sphere.GetComponentInChildren<Light>().color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
 				clone.GetComponentInChildren<Light>().color = new Color(clonecol[0], clonecol[1], clonecol[2], 0.5f);
@@ -842,7 +924,7 @@ public class kugelblitzScript : MonoBehaviour {
 	private IEnumerator StartingKugel()
 	{
 		scale = 0.05f;
-		basecol = new float[] { 0f, 1f, 0f };
+		basecol = new float[] { 1f, 1f, 1f };
 		for (int i = -10; scale < 0.1f; i++)
 		{
 			if(i == -9)
@@ -873,7 +955,7 @@ public class kugelblitzScript : MonoBehaviour {
 	}
 
 #pragma warning disable 414
-	private string TwitchHelpMessage = "'!{0} colorblind' to toggle colorblind mode, '!{0} h/r/i' to hold, release or toggle interaction with the sphere '!{0} p/t' to wait for a pulse/ tick from the module. Please do not do stupid interactions like '!{0} rphh' or '!{0} iiiii'. Commands can be chained for the sake of solvability.";
+	private string TwitchHelpMessage = "'!{0} colorblind' to toggle colorblind mode, 'h'/'r'/'i' to hold, release or toggle interaction with the sphere (respectively). 'p'/'t' to wait for a pulse/tick from the module. Please do not do stupid interactions like '!{0} rphh' or '!{0} iiiii'. Commands can be chained for the sake of solvability.";
 #pragma warning restore 414
 	private IEnumerator ProcessTwitchCommand(string command)
 	{
@@ -935,19 +1017,21 @@ public class kugelblitzScript : MonoBehaviour {
 	IEnumerator TwitchHandleForcedSolve()
 	{
 		yield return true;
-		while (!(solved == Display.Length)) { yield return new WaitForSeconds(0.5f); }
-		while (t >= 25) { yield return new WaitForSeconds(0.25f); }
-		for (int i = 0; i < controlSequence.Replace("]∙∙", "]").Length; i++)
+		if (kugelID == 1)
 		{
-			yield return true;
-			while (t < 25) { yield return new WaitForSeconds(0.5f); }
-			if (controlSequence.Replace("]∙∙", "]")[i] == '[') { Sphere.OnInteract(); }
-			if (controlSequence.Replace("]∙∙", "]")[i] == ']') { Sphere.OnInteractEnded(); }
-			if (controlSequence.Replace("]∙∙", "]")[i] == '∙') { while (t >= 25) { yield return new WaitForSeconds(0.25f); } }
-			yield return new WaitForSeconds(0.5f);
+			while (!(solved == Display.Length)) { yield return new WaitForSeconds(0.5f); yield return true; }
+			yield return null;
+			while (t >= 25) { yield return new WaitForSeconds(0.01f); }
+			for (int i = 0; i < controlSequence.Replace("]∙∙", "]").Length; i++)
+			{
+				while (t < 25) { yield return new WaitForSeconds(0.01f); }
+				if (controlSequence.Replace("]∙∙", "]")[i] == '[') { Sphere.OnInteract(); }
+				if (controlSequence.Replace("]∙∙", "]")[i] == ']') { Sphere.OnInteractEnded(); }
+				if (controlSequence.Replace("]∙∙", "]")[i] == '∙') { while (t >= 25) { yield return new WaitForSeconds(0.01f); } }
+				yield return new WaitForSeconds(0.01f);
+			}
+			statuslight = new float[] { 0.5f, 0.25f, 1f };
+			userSequence = controlSequence.Replace("]∙∙", "]");
 		}
-		statuslight = new float[] { 0.5f, 0.25f, 1f };
-		userSequence = controlSequence.Replace("]∙∙", "]");
-		yield return new WaitForSeconds(3f);
 	}
 }
