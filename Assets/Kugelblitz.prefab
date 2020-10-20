@@ -39,7 +39,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4100237891539154}
   - component: {fileID: 33051331395622204}
-  - component: {fileID: 135922540633293416}
   - component: {fileID: 114837394881581810}
   m_Layer: 11
   m_Name: succbox
@@ -78,7 +77,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &1087426487621212
 GameObject:
   m_ObjectHideFlags: 1
@@ -94,7 +93,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &1113124911636514
 GameObject:
   m_ObjectHideFlags: 1
@@ -200,7 +199,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &1335334206111282
 GameObject:
   m_ObjectHideFlags: 1
@@ -235,7 +234,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &1359989618690194
 GameObject:
   m_ObjectHideFlags: 1
@@ -292,7 +291,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &1629442949489440
 GameObject:
   m_ObjectHideFlags: 1
@@ -359,7 +358,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &1702753814074368
 GameObject:
   m_ObjectHideFlags: 1
@@ -375,7 +374,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &1863410678345850
 GameObject:
   m_ObjectHideFlags: 1
@@ -391,7 +390,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &1940553039875726
 GameObject:
   m_ObjectHideFlags: 1
@@ -1190,10 +1189,12 @@ TextMesh:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1145682134019674}
-  m_Text: 69
+  m_Text: '-
+
+    69'
   m_OffsetZ: 0
   m_CharacterSize: 0.25
-  m_LineSpacing: 1
+  m_LineSpacing: 0.6
   m_Anchor: 4
   m_Alignment: 1
   m_TabSize: 4
@@ -1573,8 +1574,7 @@ MonoBehaviour:
   IsPassThrough: 0
   ChildRowLength: 0
   Highlight: {fileID: 114837394881581810}
-  SelectableColliders:
-  - {fileID: 135922540633293416}
+  SelectableColliders: []
   DefaultSelectableIndex: 0
   AllowSelectionWrapX: 0
   AllowSelectionWrapY: 0
@@ -1742,6 +1742,7 @@ MonoBehaviour:
   - {fileID: 1132876541478726}
   - {fileID: 1011150503713562}
   - {fileID: 1359989618690194}
+  OrbsMeshRenderer: []
   Glow:
   - {fileID: 1702753814074368}
   - {fileID: 1292951252281038}
@@ -1750,11 +1751,13 @@ MonoBehaviour:
   - {fileID: 1863410678345850}
   - {fileID: 1535773893738532}
   - {fileID: 1087426487621212}
+  GlowLight: []
   Sphere: {fileID: 114281150667352036}
   Shiny: {fileID: 1697114697750554}
   Module: {fileID: 114285193024310244}
   CBM: {fileID: 114679920705185942}
   currentModID: 1
+  kugelID: 0
 --- !u!114 &114731245387369772
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -1893,18 +1896,6 @@ SphereCollider:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1132876541478726}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 1
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!135 &135922540633293416
-SphereCollider:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 1019007008963936}
   m_Material: {fileID: 0}
   m_IsTrigger: 1
   m_Enabled: 1
