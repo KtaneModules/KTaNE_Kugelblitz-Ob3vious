@@ -113,7 +113,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1001 &208208675
+--- !u!1001 &188432686
 Prefab:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -198,20 +198,10 @@ Prefab:
       propertyPath: m_RootOrder
       value: 2
       objectReference: {fileID: 0}
-    - target: {fileID: 114848120511536268, guid: 8814ea52310d2614a9feda02ec355ae4,
-        type: 2}
-      propertyPath: FrontFaceOnly
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 114848120511536268, guid: 8814ea52310d2614a9feda02ec355ae4,
-        type: 2}
-      propertyPath: TwitchPlaysActive
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 8814ea52310d2614a9feda02ec355ae4, type: 2}
   m_IsPrefabParent: 0
---- !u!1001 &423219820
+--- !u!1001 &1658218732
 Prefab:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -249,6 +239,11 @@ Prefab:
     - target: {fileID: 4524173284910012, guid: de2e4123af215ea49b37fc2645f8ec0f, type: 2}
       propertyPath: m_RootOrder
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 114718148463703916, guid: de2e4123af215ea49b37fc2645f8ec0f,
+        type: 2}
+      propertyPath: Shiny
+      value: 
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: de2e4123af215ea49b37fc2645f8ec0f, type: 2}
