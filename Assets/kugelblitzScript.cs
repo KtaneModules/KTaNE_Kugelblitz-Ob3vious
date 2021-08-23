@@ -11,23 +11,17 @@ public class kugelblitzScript : MonoBehaviour {
 	public KMAudio Audio;
 	public AudioClip[] sounds;
 	public KMBombInfo BombInfo;
-	public GameObject[] Orbs;
-	public List<MeshRenderer> OrbsMeshRenderer;
-	public GameObject[] Glow;
-	public List<Light> GlowLight;
+	public MeshRenderer[] Orbs;
 	public KMSelectable Sphere;
-	public GameObject Shiny;
 	public KMBombModule Module;
 	public KMColorblindMode CBM;
 	private KMAudio.KMAudioRef sound;
 
-	private const int ADDED_STAGES = 0;
-	private const bool PERFORM_AUTO_SOLVE = false;
-	private const float STAGE_DELAY = 5f;
 	private bool forcedSolve = false;
 	public static string[] ignoredModules = null;
 	private bool ready = false;
-	static int struck = 0;
+	static int backtrack = 0;
+	static bool struck = false;
 
 	private float[] r = { 0f, 0f, 0f, 0f, 0f, 0f, 0f };
 	private float[] x = { 0f, 0f, 0f, 0f, 0f, 0f, 0f };
@@ -49,8 +43,10 @@ public class kugelblitzScript : MonoBehaviour {
 	private static int[][] DisplayBase = new int[0][];
 	private int[] Display;
 	public static int targetNum;
+	private int tpTargetNum;
 	public static int direction;
 	public static bool totalsolved;
+	private bool solosolve;
 	private int[,] grid = {	{ 5, 1, 3, 6, 4, 0, 2},
 							{ 1, 2, 6, 4, 0, 5, 3},
 							{ 4, 0, 5, 1, 3, 2, 6},
@@ -65,6 +61,7 @@ public class kugelblitzScript : MonoBehaviour {
 	private int rotation = 1;
 	private string userSequence = "";
 	public static string controlSequence = "";
+	private string tpControlSequence = "";
 	private string binary = "";
 	private float t = 0;
 	private int solved = 0;
@@ -91,74 +88,46 @@ public class kugelblitzScript : MonoBehaviour {
 	private int[] indigo = new int[7];
 	private int[][] violet = new int[][] { new int[] { 0, 0, 0, 0, 0, 0, 0 }, new int[] { 0, 0, 0, 0, 0, 0, 0 } };
 
+#pragma warning disable 0649
+	bool TwitchPlaysActive;
+#pragma warning restore 0649
+
 	private MeshRenderer sphereMeshRenderer;
 	private TextMesh sphereTextMesh;
-	private Light shinyMeshRenderer;
 
 	void Awake () {
 		kugelcount = 0;
-		struck = 0;
+		backtrack = 0;
 		totalsolved = false;
 		controlSequence = "[";
+		tpControlSequence = "[";
 		sphereMeshRenderer = Sphere.GetComponent<MeshRenderer>();
 		sphereTextMesh = Sphere.GetComponentInChildren<TextMesh>();
-		shinyMeshRenderer = Shiny.GetComponent<Light>();
-		foreach (GameObject orb in Orbs)
-		{
-			OrbsMeshRenderer.Add(orb.GetComponent<MeshRenderer>());
-		}
-
-		foreach (GameObject light in Glow)
-		{
-			GlowLight.Add(light.GetComponent<Light>());
-		}
 		
 		currentModID = modID++;
 		colorblind = CBM.ColorblindModeActive;
 
-		if (ignoredModules == null)
-			ignoredModules = GetComponent<KMBossModule>().GetIgnoredModules("Kugelblitz", new string[]{
-				"Forget Me Not",     
-				"Forget Everything", 
-				"Turn The Key",      
-				"Souvenir",         
-				"The Time Keeper", 
-				"Simon's Stages", 
-				"Forget It Not",
-				"Forget This",
-				"Forget Them All",
-				"Divided Squares",
-				"Übermodule",
-				"Encryption Bingo",
-				"Organization",
-				"Ultimate Custom Night",
-				"RPS Judging",
-				"Cookie Jar",
-				"Brainf---",
-				"Kugelblitz" //for the sake of safety
-			});
+		ignoredModules = ignoredModules ?? GetComponent<KMBossModule>().GetIgnoredModules("Kugelblitz", new string[] { "Kugelblitz" /*just get internet ffs*/});
 
 		Sphere.OnInteract += delegate ()
 		{
 			if (solved != Display.Length)
 			{
-				Module.HandleStrike(); sphereMeshRenderer.material.color = new Color(0.5f, 0f, 0f); basecol = new float[] { 0.5f, 0f, 0f }; hold = false;
-				struck = (struck + 1) % (solved + 1);
+				Module.HandleStrike(); sphereMeshRenderer.material.color = new Color(0.5f, 0f, 0f); 
+				basecol = new float[] { 0.5f, 0f, 0f }; 
+				hold = false;
 			}
 			else
 			{
 				if (!solve)
 				{
 					sphereMeshRenderer.material.color = new Color(1f, 1f, 1f);
-					shinyMeshRenderer.color = new Color(1f, 1f, 1f, 0.5f);
 					basecol = new float[] { 1f, 1f, 1f };
 				}
 				hold = true; 
 				userSequence += '[';
 				if (userSequence == "[")
-				{
 					sound = Audio.PlaySoundAtTransformWithRef("VoidSucc", Module.transform);
-				}
 			}
 			return false;
 		};
@@ -184,10 +153,16 @@ public class kugelblitzScript : MonoBehaviour {
 		for (int i = 0; i < 7; i++)
 		{
 			r[i] = Rnd.Range(0.055f, 0.09f);
-			x[i] = Rnd.Range(-1f, 1f); y[i] = Rnd.Range(-1f, 1f); z[i] = Rnd.Range(-1f, 1f);
+			x[i] = Rnd.Range(-1f, 1f); 
+			y[i] = Rnd.Range(-1f, 1f); 
+			z[i] = Rnd.Range(-1f, 1f);
 			r2[i] = Mathf.Pow(Mathf.Pow(x[i], 2f) + Mathf.Pow(y[i], 2f) + Mathf.Pow(z[i], 2f), 0.5f);
-			x[i] = x[i] * r[i] / r2[i]; y[i] = y[i] * r[i] / r2[i]; z[i] = z[i] * r[i] / r2[i];
-			vx[i] = Rnd.Range(-.1f, .1f); vy[i] = Rnd.Range(-.1f, .1f); vz[i] = Rnd.Range(-.1f, .1f);
+			x[i] = x[i] * r[i] / r2[i]; 
+			y[i] = y[i] * r[i] / r2[i]; 
+			z[i] = z[i] * r[i] / r2[i];
+			vx[i] = Rnd.Range(-.1f, .1f); 
+			vy[i] = Rnd.Range(-.1f, .1f); 
+			vz[i] = Rnd.Range(-.1f, .1f);
 			Orbs[i].transform.localPosition = new Vector3(x[i], y[i], z[i]);
 			vmod[i] = 0.001f / Mathf.Pow(r[i], 2f);
 		}
@@ -203,19 +178,18 @@ public class kugelblitzScript : MonoBehaviour {
 
 	private void ActivateModule()
 	{
-		int count = BombInfo.GetSolvableModuleNames().Count(a => !ignoredModules.Contains(a)) + ADDED_STAGES;
+		int count = BombInfo.GetSolvableModuleNames().Count(a => !ignoredModules.Contains(a));
 		string[] cardinals = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"};
 		if (count == 0) { Module.HandlePass(); forcedSolve = true; } //Prevent deadlock
 		else if (kugelID == 1)
 		{
 			Debug.LogFormat("[Kugelblitz #{0}] Found {1} solvable modules.", currentModID, count);
-			extras = new int[] { 1, 2, 3, 4, 5, 6, 7 }.Shuffle().Take(kugelcount - 1).ToList();
 			DisplayBase = new int[kugelcount][];
 			for (int i = 0; i < DisplayBase.Length; i++)
 			{
 				DisplayBase[i] = new int[count];
 			}
-			targetNum = Rnd.Range(0, 1) * 64 + Rnd.Range(0, 7) * 8 + Rnd.Range(0, 7);
+			targetNum = Rnd.Range(0, 2) * 64 + Rnd.Range(0, 7) * 8 + Rnd.Range(0, 7);
 			int previous = 0;
 			for (int i = 0; i < count - 1; i++)
 			{
@@ -267,12 +241,12 @@ public class kugelblitzScript : MonoBehaviour {
 				storedb[i] %= 7;
 			}
 			Debug.LogFormat("[Kugelblitz #{0}] Calculated values are {1}.", currentModID, storedb.Join(""));
-            if (extras.Contains(1))
-            {
-                for (int i = 0; i < 7; i++)
-                {
+			if (extras.Contains(1))
+			{
+				for (int i = 0; i < 7; i++)
+				{
 					storedb[i] = (storedb[i] + red[i]) % 7;
-                }
+				}
 				Debug.LogFormat("[Kugelblitz #{0}] Modified values (red) are {1}.", currentModID, storedb.Join(""));
 			}
 			for (int i = 0; i < storedb.Length; i++)
@@ -295,9 +269,7 @@ public class kugelblitzScript : MonoBehaviour {
 			{
 				string tempbinary = "";
 				for (int i = 0; i < 7; i++)
-				{
 					if (extras.Contains(3))
-					{
 						for (int j = 0; j < 4; j++)
 						{
 							if (binary[i * 4 + j].ToString() != orange[i].ToString())
@@ -305,9 +277,7 @@ public class kugelblitzScript : MonoBehaviour {
 							else
 								tempbinary += "0";
 						}
-					}
 					else
-					{
 						for (int j = 0; j < 3; j++)
 						{
 							if (binary[i * 3 + j].ToString() != orange[i].ToString())
@@ -315,8 +285,6 @@ public class kugelblitzScript : MonoBehaviour {
 							else
 								tempbinary += "0";
 						}
-					}
-				}
 				binary = tempbinary;
 				Debug.LogFormat("[Kugelblitz #{0}] Modified binary (orange) is 1{1}.", currentModID, binary);
 			}
@@ -338,13 +306,9 @@ public class kugelblitzScript : MonoBehaviour {
 					else
 					{
 						if (h)
-						{
 							controlSequence += ']';
-						}
 						else
-						{
 							controlSequence += '[';
-						}
 						h = !h;
 						if (k < 1)
 							k = 1;
@@ -358,13 +322,9 @@ public class kugelblitzScript : MonoBehaviour {
 					{
 						k = 0;
 						if (h)
-						{
 							controlSequence += ']';
-						}
 						else
-						{
 							controlSequence += '[';
-						}
 						h = !h;
 						if (k < 1)
 							k = 1;
@@ -382,25 +342,131 @@ public class kugelblitzScript : MonoBehaviour {
 				}
 			}
 			if (h)
-			{
 				controlSequence += "]∙∙";
-			}
 			else
-			{
-				if (controlSequence[controlSequence.Length - 1] != '∙' || controlSequence[controlSequence.Length - 2] != '∙')
-				{
-					while (controlSequence[controlSequence.Length - 1] != '∙' || controlSequence[controlSequence.Length - 2] != '∙')
-						controlSequence += '∙';
-				}
-			}
+				while (controlSequence[controlSequence.Length - 1] != '∙' || controlSequence[controlSequence.Length - 2] != '∙')
+					controlSequence += '∙';
 			Debug.LogFormat("[Kugelblitz #{0}] The calculated sequence is {1}, which translates to {2}.", currentModID, controlSequence.Replace("]∙∙", "]").Replace("[", "i").Replace("]", "i").Replace("∙", "p"), controlSequence.Replace("]∙∙", "]"));
 		}
 		else
-		{
 			Debug.LogFormat("[Kugelblitz #{0}] Logging can be found at 'Kugelblitz #{1}'.", currentModID, (currentModID - kugelID + 1));
+		if (count > 0 && kugelcount > 1 && TwitchPlaysActive)
+		{
+			storedb = new int[0];
+			tpTargetNum = 0;
+			for (int i = 0; i < count; i++)
+			{
+				tpTargetNum ^= DisplayBase[kugelID - 1][i];
+			}
+			Debug.LogFormat("[Kugelblitz #{0}] Twitch Plays alternative activated. Generating private sequence.", currentModID);
+			pivot[0] = (tpTargetNum / 8) % 8;
+			pivot[1] = tpTargetNum % 8;
+			pivot[2] = direction % 8;
+			if (tpTargetNum / 64 == 1)
+				rotation *= -1;
+			Debug.LogFormat("[Kugelblitz #{0}] Generated binary numbers were {1}. This will result in {2}.", currentModID, DisplayBase[kugelID - 1].Select(x => Binarify(x)).Join(", "), Binarify(tpTargetNum));
+			Debug.LogFormat("[Kugelblitz #{0}] Starting at ({1}, {2}) in direction {3}.", currentModID, pivot[0], pivot[1], cardinals[direction]);
+			for (int i = 0; i < 7; i++)
+			{
+				storedb = storedb.Concat(new int[] { 0 }).ToArray();
+				for (int j = 0; j <= i; j++)
+				{
+					//Debug.LogFormat("[Kugelblitz #{0}] ({1}, {2}), {3}.", currentModID, pivot[0], pivot[1], grid[pivot[1], pivot[0]]);
+					pivot[2] = (pivot[2] + 16) % 8;
+					storedb[i] += grid[pivot[1], pivot[0]];
+					pivot[0] += xtransf[pivot[2]];
+					pivot[1] += ytransf[pivot[2]];
+					if (!(0 <= pivot[0] && pivot[0] < 7))
+					{
+						pivot[1] = 6 - pivot[1];
+						pivot[0] = (pivot[0] + 7) % 7;
+						rotation *= -1;
+						pivot[2] = 4 - pivot[2];
+
+					}
+					if (!(0 <= pivot[1] && pivot[1] < 7))
+					{
+						pivot[0] = 6 - pivot[0];
+						pivot[1] = (pivot[1] + 7) % 7;
+						rotation *= -1;
+						pivot[2] = -pivot[2];
+					}
+				}
+				pivot[2] = pivot[2] + rotation * 3;
+				storedb[i] %= 7;
+			}
+			Debug.LogFormat("[Kugelblitz #{0}] Calculated values are {1}.", currentModID, storedb.Join(""));
+
+			for (int i = 0; i < storedb.Length; i++)
+			{
+				string[] binarystuff = { "000", "001", "010", "011", "100", "101", "110" };
+				binary += binarystuff[storedb[i]];
+			}
+			Debug.LogFormat("[Kugelblitz #{0}] The calculated binary is 1{1}.", currentModID, binary);
+
+			int k = 1;
+			bool h = true;
+			for (int i = 0; i < binary.Length; i++)
+			{
+				if (binary[i] == '1')
+				{
+					if (k >= 3)
+					{
+						k = 0;
+						tpControlSequence += '∙';
+						if (k > -1)
+							k = -1;
+						else
+							k--;
+					}
+					else
+					{
+						if (h)
+							tpControlSequence += ']';
+						else
+							tpControlSequence += '[';
+						h = !h;
+						if (k < 1)
+							k = 1;
+						else
+							k++;
+					}
+				}
+				else
+				{
+					if (k <= -2 || (k <= -1 && !h))
+					{
+						k = 0;
+						if (h)
+							tpControlSequence += ']';
+						else
+							tpControlSequence += '[';
+						h = !h;
+						if (k < 1)
+							k = 1;
+						else
+							k++;
+					}
+					else
+					{
+						tpControlSequence += '∙';
+						if (k > -1)
+							k = -1;
+						else
+							k--;
+					}
+				}
+			}
+			if (h)
+				tpControlSequence += "]∙∙";
+			else
+				while (tpControlSequence[tpControlSequence.Length - 1] != '∙' || tpControlSequence[tpControlSequence.Length - 2] != '∙')
+					tpControlSequence += '∙';
+			Debug.LogFormat("[Kugelblitz #{0}] The calculated sequence is {1}, which translates to {2}.", currentModID, tpControlSequence.Replace("]∙∙", "]").Replace("[", "i").Replace("]", "i").Replace("∙", "p"), tpControlSequence.Replace("]∙∙", "]"));
 		}
 		Display = new int[count];
 		ready = true;
+		StartCoroutine(Run());
 	}
 		
 	IEnumerator Run () {
@@ -419,7 +485,7 @@ public class kugelblitzScript : MonoBehaviour {
 					else
 					{
 						solved = BombInfo.GetSolvedModuleNames().Where(a => !ignoredModules.Contains(a)).Count();
-						if (memcount != solved) { memcount = solved; struck = 0; StartCoroutine(KugelNextStage()); }
+						if (memcount != solved) { memcount = solved; backtrack = 0; StartCoroutine(KugelNextStage()); }
 						int j = 1;
 
 						string col = "-ROYGBIV";
@@ -439,10 +505,8 @@ public class kugelblitzScript : MonoBehaviour {
 							if (ready && !(solved == Display.Length))
 							{
 								for (int k = 0; k < Display.Length; k++)
-								{
 									Display[k] = DisplayBase[kugelID - 1][k];
-								}
-								if (((Display[solved - struck] / j) % 2 == 1))
+								if (((Display[solved - backtrack] / j) % 2 == 1))
 								{
 									if (kugelID > 1 && kugelID < 9 && i == 7 - extras[kugelID - 2])
 									{
@@ -459,7 +523,7 @@ public class kugelblitzScript : MonoBehaviour {
 								}
 								else
 								{
-									if ((solved - struck) % 2 == 1 && kugelID < 9)
+									if ((solved - backtrack) % 2 == 1 && kugelID < 9)
 									{
 										if (kugelID > 1 && kugelID < 9)
 										{
@@ -482,27 +546,27 @@ public class kugelblitzScript : MonoBehaviour {
 									}
 								}
 								if (i == 6 - (int)(t * 2.8f) && colorblind)
-                                {
+								{
 									if (kugelID == 1)
 									{
 										sphereTextMesh.color = new Color(1f, 1f, 1f);
-										sphereTextMesh.text = col[7 - i] + bri[((Display[solved - struck] / j) % 2)].ToString();
+										sphereTextMesh.text = col[7 - i] + bri[((Display[solved - backtrack] / j) % 2)].ToString();
 									}
 									else if (kugelID < 9)
 									{
 										sphereTextMesh.color = new Color(0f, 0f, 0f);
 										if (i == 7 - extras[kugelID - 2])
-											sphereTextMesh.text = col[extras[kugelID - 2]] + "\nK" + bri[((Display[solved - struck] / j) % 2)].ToString();
+											sphereTextMesh.text = col[extras[kugelID - 2]] + "\nK" + bri[((Display[solved - backtrack] / j) % 2)].ToString();
 										else
-											sphereTextMesh.text = col[extras[kugelID - 2]] + "\n" + col[7 - i] + bri[((Display[solved - struck] / j) % 2)].ToString();
+											sphereTextMesh.text = col[extras[kugelID - 2]] + "\n" + col[7 - i] + bri[((Display[solved - backtrack] / j) % 2)].ToString();
 									}
 								}
 							}
 							else
 							{
-								if (struck > 0)
+								if (backtrack > 0)
 								{
-									if (((Display[solved - struck] / j) % 2 == 1))
+									if (((Display[solved - backtrack] / j) % 2 == 1))
 									{
 										if (kugelID > 1 && kugelID < 9 && i == 7 - extras[kugelID - 2])
 										{
@@ -519,7 +583,7 @@ public class kugelblitzScript : MonoBehaviour {
 									}
 									else
 									{
-										if ((solved - struck) % 2 == 1 && kugelID < 9)
+										if ((solved - backtrack) % 2 == 1 && kugelID < 9)
 										{
 											if (kugelID > 1 && kugelID < 9)
 											{
@@ -544,11 +608,11 @@ public class kugelblitzScript : MonoBehaviour {
 									if (i == 6 - (int)(t * 2.8f) && colorblind)
 									{
 										if (kugelID > 1 && kugelID < 9 && i == 7 - extras[kugelID - 2])
-											sphereTextMesh.text = col[extras[kugelID - 2]] + "\nK" + bri[((Display[solved - struck] / j) % 2)].ToString();
+											sphereTextMesh.text = col[extras[kugelID - 2]] + "\nK" + bri[((Display[solved - backtrack] / j) % 2)].ToString();
 										else if (kugelID > 1 && kugelID < 9)
-											sphereTextMesh.text = col[extras[kugelID - 2]] + "\n" + col[7 - i] + bri[((Display[solved - struck] / j) % 2)].ToString();
+											sphereTextMesh.text = col[extras[kugelID - 2]] + "\n" + col[7 - i] + bri[((Display[solved - backtrack] / j) % 2)].ToString();
 										else
-											sphereTextMesh.text = col[7 - i] + bri[((Display[solved - struck] / j) % 2)].ToString();
+											sphereTextMesh.text = col[7 - i] + bri[((Display[solved - backtrack] / j) % 2)].ToString();
 									}
 								}
 								else
@@ -564,13 +628,10 @@ public class kugelblitzScript : MonoBehaviour {
 										nr[i] = (cr[direction - 1] + 63f * nr[i]) / 64f; ng[i] = (cg[direction - 1] + 63f * ng[i]) / 64f; nb[i] = (cb[direction - 1] + 63f * nb[i]) / 64f;
 									}
 									if (colorblind)
-									{
 										sphereTextMesh.text = direction.ToString() + col[direction];
-									}
 								}
 							}
-							OrbsMeshRenderer[i].material.color = new Color(nr[i], ng[i], nb[i], 0.5f);
-							GlowLight[i].color = new Color(nr[i], ng[i], nb[i], 0.0625f);
+							Orbs[i].material.color = new Color(nr[i], ng[i], nb[i], 0.5f);
 							j = j * 2;
 							if (!colorblind)
 								sphereTextMesh.text = "";
@@ -591,7 +652,6 @@ public class kugelblitzScript : MonoBehaviour {
 							basecol[0] = (1f + basecol[0] * 63f) / 64f; basecol[1] = (1f + basecol[1] * 63f) / 64f; basecol[2] = (1f + basecol[2] * 63f) / 64f;
 						}
 						sphereMeshRenderer.material.color = new Color(basecol[0], basecol[1], basecol[2]);
-						shinyMeshRenderer.color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
 					}
 					yield return null;
 				}
@@ -609,19 +669,31 @@ public class kugelblitzScript : MonoBehaviour {
 				{
 					if (userSequence[userSequence.Length - 2] == '∙')
 					{
-						if (userSequence != controlSequence)
+						if (userSequence != controlSequence && userSequence != tpControlSequence)
 						{
 							sphereMeshRenderer.material.color = new Color(0.5f, 0f, 0f);
 							basecol = new float[] { 0.5f, 0f, 0f };
-							Module.HandleStrike();
-							Debug.LogFormat("[Kugelblitz #{0}] You submitted {1}, but I expected {2}.", currentModID, userSequence.Replace("]∙∙", "]"), controlSequence.Replace("]∙∙", "]"));
-							struck = (struck + 1) % (solved + 1);
+							if (!struck || !(new string[] { "[]", "[][]" }.Contains(userSequence.Replace("]∙∙", "]"))))
+							{
+								Module.HandleStrike();
+								if (TwitchPlaysActive && kugelcount > 1)
+									Debug.LogFormat("[Kugelblitz #{0}] You submitted {1}, but I expected {2} or {3}.", currentModID, userSequence.Replace("]∙∙", "]"), controlSequence.Replace("]∙∙", "]"), tpControlSequence.Replace("]∙∙", "]"));
+								else
+									Debug.LogFormat("[Kugelblitz #{0}] You submitted {1}, but I expected {2}.", currentModID, userSequence.Replace("]∙∙", "]"), controlSequence.Replace("]∙∙", "]"));
+								struck = true;
+							}
+							else if (struck && userSequence.Replace("]∙∙", "]") == "[][]")
+								backtrack = (backtrack + solved) % (solved + 1);
+							else
+								backtrack = (backtrack + 1) % (solved + 1);
 							userSequence = "";
 							sound.StopSound();
 							sound = null;
 						}
 						else
 						{
+							if (userSequence == tpControlSequence)
+								solosolve = true;
 							statuslight = new float[] { 1f, 1f, 1f };
 							StartCoroutine(SolvingKugel());
 						}
@@ -635,7 +707,7 @@ public class kugelblitzScript : MonoBehaviour {
 	{
 		sphereTextMesh.text = "";
 		solve = true;
-		totalsolved = true;
+		totalsolved = !solosolve;
 		basecol = new float[] { 1f, 1f, 1f };
 		KMAudio.KMAudioRef noise = null;
 		for (int i = -10; scale >= 0.01f; i++)
@@ -651,7 +723,6 @@ public class kugelblitzScript : MonoBehaviour {
 			}
 			sphereTextMesh.text = "";
 			sphereMeshRenderer.material.color = new Color(basecol[0], basecol[1], basecol[2]);
-			shinyMeshRenderer.color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
 			scale -= i / 5000f;
 			yield return new WaitForSeconds(0.02f);
 			basecol[0] = (statuslight[0] + basecol[0] * 31f) / 32f; basecol[1] = (statuslight[1] + basecol[1] * 31f) / 32f; basecol[2] = (statuslight[2] + basecol[2] * 31f) / 32f;
@@ -661,18 +732,14 @@ public class kugelblitzScript : MonoBehaviour {
 				Orbs[j].transform.localPosition = new Vector3(x[j], y[j], z[j]);
 			}
 			Sphere.transform.localScale = new Vector3(scale, scale, scale);
-			shinyMeshRenderer.range = scale / 2f + 0.05f;
 		}
 		Sphere.transform.localScale = new Vector3(0.025f, 0.025f, 0.025f);
-		shinyMeshRenderer.range = 0.0375f;
 		for (int j = 0; j < 7; j++)
 		{
 			Orbs[j].transform.localPosition = new Vector3(0f, 0f, 0f);
 			Orbs[j].transform.localScale = new Vector3( 0f, 0f, 0f );
-			GlowLight[j].range = 0f;
 		}
 		sphereMeshRenderer.material.color = new Color(statuslight[0], statuslight[1], statuslight[2]);
-		shinyMeshRenderer.color = new Color(statuslight[0], statuslight[1], statuslight[2], 0.5f);
 		noise.StopSound();
 		noise = null;
 		/*if (something idk)
@@ -703,27 +770,24 @@ public class kugelblitzScript : MonoBehaviour {
 		basecol = new float[] { 1f, 1f, 1f };
 		for (int i = -10; scale < 0.1f; i++)
 		{
-			if(i == -9 && kugelID == 1)
+			if (i == -9 && kugelID == 1)
+			{
 				sound = Audio.PlaySoundAtTransformWithRef("HighPitch", Module.transform);
+				extras = new int[] { 1, 2, 3, 4, 5, 6, 7 }.Shuffle().Take(kugelcount - 1).ToList();
+			}
 			sphereMeshRenderer.material.color = new Color(basecol[0], basecol[1], basecol[2]);
-			shinyMeshRenderer.color = new Color(basecol[0], basecol[1], basecol[2], 0.5f);
 			scale += i / 25000f;
 			yield return new WaitForSeconds(0.02f);
 			basecol[0] = (1f + basecol[0] * 63f) / 64f; basecol[1] = (1f + basecol[1] * 63f) / 64f; basecol[2] = (1f + basecol[2] * 63f) / 64f;
 			Sphere.transform.localScale = new Vector3(scale, scale, scale);
-			shinyMeshRenderer.range = (i + 140) / 1000f;
-			shinyMeshRenderer.intensity = (i + 240) / 200f;
 		}
 		Sphere.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
-		//shinyMeshRenderer.range = 0.1f;
-		//shinyMeshRenderer.intensity = 1f;
 		scale = 0.1f;
         if (kugelID == 1)
         {
 			sound.StopSound();
 			sound = null;
 		}
-		StartCoroutine(Run());
 	}
 
 	private IEnumerator KugelNextStage()
@@ -744,10 +808,21 @@ public class kugelblitzScript : MonoBehaviour {
 
 	private void HandleQuirks(int type, int stagecount, int idnumber)
 	{
+		int singularcomp = 0;
+        if (TwitchPlaysActive)
+        {
+			singularcomp = Rnd.Range(0, 2) * 64 + Rnd.Range(0, 7) * 8 + Rnd.Range(0, 7);
+		}
+        else
+        {
+			singularcomp = Rnd.Range(0, 128);
+		}
+		int fullxor = singularcomp;
+		int d = 64;
 		switch (type)
 		{
 			case 1:
-				for (int i = 0; i < stagecount; i++)
+				for (int i = 0; i < stagecount - 1; i++)
 				{
 					int[] values = new int[7];
 					for (int j = 0; j < 7; j++)
@@ -762,11 +837,19 @@ public class kugelblitzScript : MonoBehaviour {
 						k = k * 2 + values[j];
 					}
 					DisplayBase[idnumber][i] = k;
+					fullxor ^= k;
 				}
+				DisplayBase[idnumber][stagecount - 1] = fullxor;
+				for (int i = 0; i < 7; i++)
+                {
+					red[i] += (fullxor / d) % 2;
+					red[i] %= 7;
+					d /= 2;
+                }
 				Debug.LogFormat("[Kugelblitz #{0}] Generated binary numbers for extra Kugelblitz (red) are {1}. This will result in {2}.", currentModID, DisplayBase[idnumber].Select(x => Binarify(x)).Join(", "), red.Join(""));
 				break;
 			case 2:
-				for (int i = 0; i < stagecount; i++)
+				for (int i = 0; i < stagecount - 1; i++)
 				{
 					int[] values = new int[7];
 					for (int j = 0; j < 7; j++)
@@ -781,11 +864,19 @@ public class kugelblitzScript : MonoBehaviour {
 						k = k * 2 + values[j];
 					}
 					DisplayBase[idnumber][i] = k;
+					fullxor ^= k;
+				}
+				DisplayBase[idnumber][stagecount - 1] = fullxor;
+				for (int i = 0; i < 7; i++)
+				{
+					orange[i] += (fullxor / d) % 2;
+					orange[i] %= 2;
+					d /= 2;
 				}
 				Debug.LogFormat("[Kugelblitz #{0}] Generated binary numbers for extra Kugelblitz (orange) are {1}. This will result in {2}.", currentModID, DisplayBase[idnumber].Select(x => Binarify(x)).Join(", "), orange.Join(""));
 				break;
 			case 3:
-				for (int i = 0; i < stagecount; i++)
+				for (int i = 0; i < stagecount - 1; i++)
 				{
 					int[] values = new int[7];
 					for (int j = 0; j < 7; j++)
@@ -800,11 +891,19 @@ public class kugelblitzScript : MonoBehaviour {
 						k = k * 2 + values[j];
 					}
 					DisplayBase[idnumber][i] = k;
+					fullxor ^= k;
+				}
+				DisplayBase[idnumber][stagecount - 1] = fullxor;
+				for (int i = 0; i < 7; i++)
+				{
+					yellow[i] += (fullxor / d) % 2;
+					yellow[i] %= 2;
+					d /= 2;
 				}
 				Debug.LogFormat("[Kugelblitz #{0}] Generated binary numbers for extra Kugelblitz (yellow) are {1}. This will result in {2}.", currentModID, DisplayBase[idnumber].Select(x => Binarify(x)).Join(", "), yellow.Join(""));
 				break;
 			case 4:
-				for (int i = 0; i < stagecount; i++)
+				for (int i = 0; i < stagecount - 1; i++)
 				{
 					int[] values = new int[7];
 					for (int j = 0; j < 7; j++)
@@ -819,11 +918,19 @@ public class kugelblitzScript : MonoBehaviour {
 						k = k * 2 + values[j];
 					}
 					DisplayBase[idnumber][i] = k;
+					fullxor ^= k;
+				}
+				DisplayBase[idnumber][stagecount - 1] = fullxor;
+				for (int i = 0; i < 7; i++)
+				{
+					green[i] += (fullxor / d) % 2;
+					green[i] %= 7;
+					d /= 2;
 				}
 				Debug.LogFormat("[Kugelblitz #{0}] Generated binary numbers for extra Kugelblitz (green) are {1}. This will result in {2}.", currentModID, DisplayBase[idnumber].Select(x => Binarify(x)).Join(", "), green.Select(x => x + 1).Join(""));
 				break;
 			case 5:
-				for (int i = 0; i < stagecount; i++)
+				for (int i = 0; i < stagecount - 1; i++)
 				{
 					int[] values = new int[7];
 					for (int j = 0; j < 7; j++)
@@ -838,7 +945,15 @@ public class kugelblitzScript : MonoBehaviour {
 						k = k * 2 + values[j];
 					}
 					DisplayBase[idnumber][i] = k;
-                }
+					fullxor ^= k;
+				}
+				DisplayBase[idnumber][stagecount - 1] = fullxor;
+				for (int i = 0; i < 7; i++)
+				{
+					blue[i] += (fullxor / d) % 2;
+					blue[i] %= 3;
+					d /= 2;
+				}
 				{
 					int[] skipover = { 0, 1, 2, 3, 5, 6 };
 					for (int i = 0; i < 6; i++)
@@ -849,7 +964,7 @@ public class kugelblitzScript : MonoBehaviour {
 				}
 				break;
 			case 6:
-				for (int i = 0; i < stagecount; i++)
+				for (int i = 0; i < stagecount - 1; i++)
 				{
 					int[] values = new int[7];
 					for (int j = 0; j < 7; j++)
@@ -864,6 +979,14 @@ public class kugelblitzScript : MonoBehaviour {
 						k = k * 2 + values[j];
 					}
 					DisplayBase[idnumber][i] = k;
+					fullxor ^= k;
+				}
+				DisplayBase[idnumber][stagecount - 1] = fullxor;
+				for (int i = 0; i < 7; i++)
+				{
+					indigo[i] += (fullxor / d) % 2;
+					indigo[i] %= 2;
+					d /= 2;
 				}
 				{
 					int[] skipover = { 0, 1, 2, 3, 4, 6 };
@@ -876,7 +999,7 @@ public class kugelblitzScript : MonoBehaviour {
 				}
 				break;
 			case 7:
-				for (int i = 0; i < stagecount; i++)
+				for (int i = 0; i < stagecount - 1; i++)
 				{
 					int[] values = new int[7];
 					for (int j = 0; j < 7; j++)
@@ -891,6 +1014,14 @@ public class kugelblitzScript : MonoBehaviour {
 						k = k * 2 + values[j];
 					}
 					DisplayBase[idnumber][i] = k;
+					fullxor ^= k;
+				}
+				DisplayBase[idnumber][stagecount - 1] = fullxor;
+				for (int i = 0; i < 7; i++)
+				{
+					violet[(stagecount - 1) % 2][i] += (fullxor / d) % 2;
+					violet[(stagecount - 1) % 2][i] %= 7;
+					d /= 2;
 				}
 				Debug.LogFormat("[Kugelblitz #{0}] Generated binary numbers for extra Kugelblitz (violet) are {1}. This will result in horzontally placed modifier {2} and vertically placed modifier {3}.", currentModID, DisplayBase[idnumber].Select(x => Binarify(x)).Join(", "), violet[0].Join(""), violet[1].Join(""));
 				break;
@@ -975,5 +1106,7 @@ public class kugelblitzScript : MonoBehaviour {
 			}
 			userSequence = controlSequence.Replace("]∙∙", "]");
 		}
+        while (!totalsolved)
+			yield return true;
 	}
 }

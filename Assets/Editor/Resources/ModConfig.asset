@@ -22,10 +22,7 @@ MonoBehaviour:
     Note this is a boss module. Enjoy spinning around on a klein bottle and discussing
     a 20+ second sequence of holds and releases!
 
-    Inspired by Timwi''s Black Hole module, except this one already ate the puzzlebackground...
-
-
-    enjoy suffering :)'
-  version: 1.6
+    Inspired by Timwi''s Black Hole module, except this one already ate the puzzlebackground...'
+  version: 2.2
   outputFolder: build
   previewImage: {fileID: 2800000, guid: c2d7b3955613c854f82d42175337ad6a, type: 3}
